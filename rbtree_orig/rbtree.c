@@ -652,9 +652,9 @@ int main(int argc, char *argv[])
         printf(" number of node : %llu\n", cnt_node);
         printf(" size of tree memory : %.4lf %s\n", transmemsize, byteunit[bytelevel]);
 
-	printf(" Total insertion time: %6.2f s\n", inend.tv_sec - instart.tv_sec + (inend.tv_usec - instart.tv_usec) / 1000000.0);
-	printf(" Total deletion time: %6.2f s\n", delend.tv_sec - delstart.tv_sec + (delend.tv_usec - delstart.tv_usec) / 1000000.0);
-        printf(" Execution time: %6.2f s\n", end.tv_sec - start.tv_sec + (end.tv_usec - start.tv_usec) / 1000000.0);
+	printf(" Insertion time: %6.2f s\n", inend.tv_sec - instart.tv_sec + (inend.tv_usec - instart.tv_usec) / 1000000.0);
+	printf(" Deletion time: %6.2f s\n", delend.tv_sec - delstart.tv_sec + (delend.tv_usec - delstart.tv_usec) / 1000000.0);
+        printf(" Elapsed time: %6.2f s\n", end.tv_sec - start.tv_sec + (end.tv_usec - start.tv_usec) / 1000000.0);
 
 
 
