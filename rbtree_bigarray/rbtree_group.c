@@ -537,14 +537,19 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey) {
 //			(*(del_node->rb_parent->area->addr))++;
 		}
 
-		del_node->is_free = 1;
+		free(del_node->rb_keys);
+		free(del_node);
+
+//		del_node->is_free = 1;
 //		add_swap_list(del_node);
 	}
 	else {
 		if (is_rb_black(y))
 			simul_rb_delete_fixup(T, x);
 
-		y->is_free = 1;
+		free(y->rb_keys);
+		free(y);
+//		y->is_free = 1;
 //		add_swap_list(y);
 	}
 	T->nil_node->rb_parent = T->nil_node;
