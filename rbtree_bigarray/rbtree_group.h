@@ -15,6 +15,8 @@
 //#define KEY_HOLE_SIZE	1
 //#define GROUP_SIZE	(1*(KEY_HOLE_SIZE))
 
+#define DEBUG_WRITE_COUNT 0
+
 
 typedef struct simul_rb_key {
 	long long int rb_key;

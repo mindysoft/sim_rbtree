@@ -10,14 +10,13 @@
 #include "rbtree_group.h"
 #include "buddy_allocator.h"
 
-//#define WSS	1000000
-
 struct simul_swap_node swap_head;
 unsigned long long int swap_count = 0;
 unsigned long long int cnt_node = 0;
 int GROUP_SIZE = 0; 
 int WSS = 0;
 unsigned long long int ENABLE_MEM_SIZE = (1024 * 1024 * 1024);	// 8 GB => this means 8 * 1GB / 8;  "/ 8" -> 64bit machine.
+unsigned long long int write_count = 0;
 
 simul_rb_node *parent_of(simul_rb_node *node) {
 	return node->rb_parent;
@@ -133,42 +132,56 @@ simul_rb_node *simul_rb_left_rotate(simul_rb_root *T, simul_rb_node *node) {
 
 	/* exchange left child of node_right to right child of node */
 	node->rb_right = left_of(right_node);
-//	node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	node->count++;   // for analysis
+#endif
 //	(*(node->area->addr))++;
 //	add_swap_list(node);
 
 	if (left_of(right_node) != T->nil_node) {
 		left_of(right_node)->rb_parent = node;
-//		left_of(right_node)->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		left_of(right_node)->count++;   // for analysis
+#endif
 //		(*(right_node->rb_left->area->addr))++;
 //		add_swap_list(right_node->rb_left);
 	}
 
 	/* change parent connection */
 	right_node->rb_parent = parent_of(node);
-//	right_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	right_node->count++;   // for analysis
+#endif
 //	(*(right_node->area->addr))++;
 //	add_swap_list(right_node);
 
 	if (node == parent_of(node)->rb_left) {   /* case: node is left child of parent */
 		parent_of(node)->rb_left = right_node;
-//		parent_of(node)->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		parent_of(node)->count++;   // for analysis
+#endif
 //		(*(node->rb_parent->area->addr))++;
 //		add_swap_list(node->rb_parent);
 	}
 	else if (node == parent_of(node)->rb_right) {   /* case: node is right child of parent */
 		parent_of(node)->rb_right = right_node;
-//		parent_of(node)->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		parent_of(node)->count++;   // for analysis
+#endif
 //		(*(node->rb_parent->area->addr))++;
 //		add_swap_list(node->rb_parent);
 	}
 
 	right_node->rb_left = node;
-//	right_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	right_node->count++;   // for analysis
+#endif
 //	(*(right_node->area->addr))++;
 //	add_swap_list(right_node);
 	node->rb_parent = right_node;
-//	node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	node->count++;   // for analysis
+#endif
 //	(*(node->area->addr))++;
 //	add_swap_list(node);
 
@@ -183,42 +196,56 @@ simul_rb_node *simul_rb_right_rotate(simul_rb_root *T, simul_rb_node *node) {
 
 	/* exchange right child of node_left to left child of node */
 	node->rb_left = right_of(left_node);
-//	node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	node->count++;   // for analysis
+#endif
 //	(*(node->area->addr))++;
 //	add_swap_list(node);
 
 	if (right_of(left_node) != T->nil_node) {
 		right_of(left_node)->rb_parent = node;
-//		right_of(left_node)->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		right_of(left_node)->count++;   // for analysis
+#endif
 //		(*(left_node->rb_right->area->addr))++;
 //		add_swap_list(left_node->rb_right);
 	}
 
 	/* change parent connection */
 	left_node->rb_parent = parent_of(node);
-//	left_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	left_node->count++;   // for analysis
+#endif
 //	(*(left_node->area->addr))++;
 //	add_swap_list(left_node);
 
 	if (node == parent_of(node)->rb_left) {   /* case: node is left child of parent */
 		parent_of(node)->rb_left = left_node;
-//		parent_of(node)->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		parent_of(node)->count++;   // for analysis
+#endif
 //		(*(node->rb_parent->area->addr))++;
 //		add_swap_list(node->rb_parent);
 	}
 	else if (node == parent_of(node)->rb_right) {   /* case: node is right child of parent */
 		parent_of(node)->rb_right = left_node;
-//		parent_of(node)->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		parent_of(node)->count++;   // for analysis
+#endif
 //		(*(node->rb_parent->area->addr))++;
 //		add_swap_list(node->rb_parent);
 	}
 
 	left_node->rb_right = node;
-//	left_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	left_node->count++;   // for analysis
+#endif
 //	(*(left_node->area->addr))++;
 //	add_swap_list(left_node);
 	node->rb_parent = left_node;
-//	node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	node->count++;   // for analysis
+#endif
 //	(*(node->area->addr))++;
 //	add_swap_list(node);
 
@@ -398,17 +425,23 @@ int simul_rb_insert(simul_rb_root *T, long long int inkey) {
 
 	if (in_parent_pos == T->root_node) {   /* the first insert (rbtree is empty) */
 		T->root_node->rb_left = new_node;
-//		T->root_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		T->root_node->count++;   // for analysis
+#endif
 //		(*(T->root_node->area->addr))++;
 	}
 	else if (new_node->std_key < in_parent_pos->std_key) {
 		in_parent_pos->rb_left = new_node;
-//		in_parent_pos->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		in_parent_pos->count++;   // for analysis
+#endif
 //		(*(in_parent_pos->area->addr))++;
 	}
 	else {
 		in_parent_pos->rb_right = new_node;
-//		in_parent_pos->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		in_parent_pos->count++;   // for analysis
+#endif
 //		(*(in_parent_pos->area->addr))++;
 	}
 
@@ -478,7 +511,7 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey) {
 	if (del_node == T->nil_node)
 		return SIMUL_RB_NOT_EXIST;
 
-	memset(&(del_node->rb_keys[delkey % (GROUP_SIZE)]), 0, sizeof(simul_rb_key) );
+	memset(&(del_node->rb_keys[delkey % (GROUP_SIZE)]), 0, sizeof(simul_rb_key));
 	del_node->cnt_key--;
 
 	if (del_node->cnt_key > 0)
@@ -487,22 +520,30 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey) {
 	y = ((del_node->rb_left == T->nil_node) || (del_node->rb_right == T->nil_node)) ? del_node : simul_rb_successor(T, del_node);
 	x = (y->rb_left == T->nil_node) ? y->rb_right : y->rb_left;
 
-//	x->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	x->count++;   // for analysis
+#endif
 //	(*(x->area->addr))++;
 	if (T->root_node == (x->rb_parent = y->rb_parent)) {/* assignment of y->p to x->p is intentional */
 		T->root_node->rb_left = x;
-//		T->root_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		T->root_node->count++;   // for analysis
+#endif
 //		(*(T->root_node->area->addr))++;
 	}
 	else {
 		if (y == y->rb_parent->rb_left) {
 			y->rb_parent->rb_left = x;
-//			y->rb_parent->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+			y->rb_parent->count++;   // for analysis
+#endif
 //			(*(y->rb_parent->area->addr))++;
 		}
 		else {
 			y->rb_parent->rb_right = x;
-//			y->rb_parent->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+			y->rb_parent->count++;   // for analysis
+#endif
 //			(*(y->rb_parent->area->addr))++;
 		}
 	}
@@ -512,31 +553,48 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey) {
 			simul_rb_delete_fixup(T, x);
 
 		y->rb_left = del_node->rb_left;
-//		y->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		y->count++;   // for analysis
+#endif
 //		(*(y->area->addr))++;
 		y->rb_right = del_node->rb_right;
-//		y->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		y->count++;   // for analysis
+#endif
 //		(*(y->area->addr))++;
 		y->rb_parent = del_node->rb_parent;
-//		y->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		y->count++;   // for analysis
+#endif
 //		(*(y->area->addr))++;
 		y->rb_color = del_node->rb_color;
 		del_node->rb_left->rb_parent = del_node->rb_right->rb_parent = y;
-//		del_node->rb_left->count++;      // for analysis
+#if DEBUG_WRITE_COUNT
+		del_node->rb_left->count++;      // for analysis
+#endif
 //		(*(del_node->rb_left->area->addr))++;
-//		del_node->rb_right->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+		del_node->rb_right->count++;   // for analysis
+#endif
 //		(*(del_node->rb_right->area->addr))++;
 		if (del_node == del_node->rb_parent->rb_left) {
 			del_node->rb_parent->rb_left = y;
-//			del_node->rb_parent->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+			del_node->rb_parent->count++;   // for analysis
+#endif
 //			(*(del_node->rb_parent->area->addr))++;
 		}
 		else {
 			del_node->rb_parent->rb_right = y;
-//			del_node->rb_parent->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+			del_node->rb_parent->count++;   // for analysis
+#endif
 //			(*(del_node->rb_parent->area->addr))++;
 		}
 
+#if DEBUG_WRITE_COUNT
+		write_count += del_node->count;
+#endif
 		free(del_node->rb_keys);
 		free(del_node);
 
@@ -547,17 +605,26 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey) {
 		if (is_rb_black(y))
 			simul_rb_delete_fixup(T, x);
 
+#if DEBUG_WRITE_COUNT
+		write_count += y->count;
+#endif
 		free(y->rb_keys);
 		free(y);
 //		y->is_free = 1;
 //		add_swap_list(y);
 	}
 	T->nil_node->rb_parent = T->nil_node;
-//	T->nil_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	T->nil_node->count++;   // for analysis
+#endif
 	T->nil_node->rb_left = T->nil_node;
-//	T->nil_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	T->nil_node->count++;   // for analysis
+#endif
 	T->nil_node->rb_right = T->nil_node;
-//	T->nil_node->count++;   // for analysis
+#if DEBUG_WRITE_COUNT
+	T->nil_node->count++;   // for analysis
+#endif
 	return ret;
 }
 
@@ -644,7 +711,10 @@ simul_rb_node *simul_rb_search(simul_rb_root *T, long long int find_key) {
 	return search_node;
 }
 void simul_rb_pre_order(simul_rb_root *T, simul_rb_node *node) {
-	printf("addr %p \tcount %u\n", node, node->count);
+//	printf("addr %p \tcount %u\n", node, node->count);
+#if DEBUG_WRITE_COUNT
+	write_count += node->count;
+#endif
 	if (node->rb_left != T->nil_node)
 		simul_rb_pre_order(T, node->rb_left);
 	if (node->rb_right != T->nil_node)
@@ -658,6 +728,10 @@ void simul_rb_delete_all(simul_rb_root *T, simul_rb_node *node) {
 		simul_rb_delete_all(T, node->rb_right);
 	//sfree(node->area);
 	//free(node->area);
+#if DEBUD_WRITE_COUNT
+	write_count += node->count;
+#endif
+	free(node->rb_keys);
 	free(node);
 }
 
@@ -761,7 +835,7 @@ int main(int argc, char *argv[])
 	struct timeval start, end, instart, inend, delstart, delend;
 
 	// for research
-	unsigned long long int sizeofmem = 0;
+	unsigned long long int sizeofmem = 0, insert_write_count = 0;
 	double transmemsize = 0.0;
 	int bytelevel = 0;
 	char byteunit[5][4] = {"B", "KB", "MB", "GB", "TB"};
@@ -792,7 +866,7 @@ int main(int argc, char *argv[])
 	init_rb_root(root);
 
 	if(argc > 3 &&  strcmp(argv[3], "rand") == 0) {
-//                printf(" -- run random mode -- \n");
+                printf(" -- run random mode -- \n");
 		gettimeofday(&instart, NULL);
                 for(i = 0; i<WSS;i++){
                         long long int key = rand() % ENABLE_MEM_SIZE;
@@ -800,6 +874,10 @@ int main(int argc, char *argv[])
                         retval = simul_rb_insert(root, (long long int)key);
                 }
 		gettimeofday(&inend, NULL);
+#if DEBUG_WRITE_COUNT
+		simul_rb_pre_order(root, root->root_node->rb_left);	
+		insert_write_count = write_count;
+#endif		
 		gettimeofday(&delstart, NULL);
                 for(i = 0; i<WSS;i++){
                         long long int key = rand() % ENABLE_MEM_SIZE;
@@ -807,6 +885,9 @@ int main(int argc, char *argv[])
                         retval = simul_rb_delete(root, (long long int)key);
                 }
 		gettimeofday(&delend, NULL);
+#if DEBUG_WRITE_COUNT
+		simul_rb_delete_all(root, root->root_node->rb_left);
+#endif
         } else {
 		printf(" -- run sequential mode -- \n");
 		gettimeofday(&instart, NULL);
@@ -815,12 +896,19 @@ int main(int argc, char *argv[])
 	//		simul_rb_swapping(root);
 		}
 		gettimeofday(&inend, NULL);
+#if DEBUG_WRITE_COUNT
+		simul_rb_pre_order(root, root->root_node->rb_left);	
+		insert_write_count = write_count;
+#endif		
 		gettimeofday(&delstart, NULL);
 		for(i = 0; i<WSS;i++){
 			retval = simul_rb_delete(root, (long long int)i);
 	//		simul_rb_swapping(root);
 		}
 		gettimeofday(&delend, NULL);
+#if DEBUG_WRITE_COUNT
+		simul_rb_delete_all(root, root->root_node->rb_left);
+#endif
 	}
 	gettimeofday(&end, NULL);
 
@@ -832,6 +920,11 @@ int main(int argc, char *argv[])
 	}
 
 	printf(" number of node : %llu\n", cnt_node);
+#if DEBUG_WRITE_COUNT
+	printf(" insert's total write : %llu\n", insert_write_count);
+	printf(" delete's total write : %llu\n", write_count - insert_write_count);
+	printf(" total write count : %llu\n", write_count);
+#endif 
 	printf(" size of tree memory : %.4lf %s\n", transmemsize, byteunit[bytelevel]);
 	
 	printf(" Insertion time: %6.2f s\n", inend.tv_sec - instart.tv_sec + (inend.tv_usec - instart.tv_usec) / 1000000.0);
