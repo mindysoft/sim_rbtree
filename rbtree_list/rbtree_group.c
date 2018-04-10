@@ -13,11 +13,13 @@
 struct simul_swap_node swap_head;
 unsigned long long int swap_count = 0;
 unsigned long long int cnt_node = 0;
+unsigned long long int cnt_key = 0;
 int GROUP_SIZE = 0; 
 int WSS = 0;
 unsigned long long int ENABLE_MEM_SIZE = (1024 * 1024 * 1024);	// 8 GB => this means 8 * 1GB / 8;  "/ 8" -> 64bit machine.
 unsigned long long int write_count = 0;
 unsigned long long int remain_count = 0;
+
 
 simul_rb_node *parent_of(simul_rb_node *node) {
 	return node->rb_parent;
@@ -43,6 +45,7 @@ void init_swap_node() {
 
 void init_rb_key(simul_rb_key *key_node, long long int key) {
 	key_node->rb_key = key;
+	init_list_head(&(key_node->list));
 //	key_node->area= (struct simul_area *)malloc(sizeof(struct simul_area));
 /*
 	key_node->area= (struct simul_area *)smalloc(sizeof(struct simul_area));
@@ -53,9 +56,8 @@ void init_rb_key(simul_rb_key *key_node, long long int key) {
 void init_rb_node(simul_rb_root *T, simul_rb_node *node, simul_rb_key *key_node) {
 	set_rb_red(node);
 	node->std_key = key_node->rb_key / (GROUP_SIZE);
-	node->rb_keys = (struct simul_rb_key *) malloc (sizeof(struct simul_rb_key) * (GROUP_SIZE));
-	memset(node->rb_keys, 0, sizeof(struct simul_rb_key) * (GROUP_SIZE));
-	node->rb_keys[key_node->rb_key % (GROUP_SIZE)].rb_key = key_node->rb_key;
+	init_list_head(&(node->rb_keys));
+	list_add(&(key_node->list), &(node->rb_keys));
 	node->cnt_key = 1;
 //	node->rb_keys[key_node->rb_key % (GROUP+SIZE)].area = key_node->area;
 	node->rb_parent = T->nil_node;
@@ -76,8 +78,7 @@ void init_rb_root(simul_rb_root *root) {
 
 	set_rb_black(root->nil_node);
 	root->nil_node->std_key = SIMUL_RB_NIL;
-	root->nil_node->rb_keys = (struct simul_rb_key *) malloc (sizeof(struct simul_rb_key) * (GROUP_SIZE));
-	memset(root->nil_node->rb_keys, 0, sizeof(struct simul_rb_key) * (GROUP_SIZE));
+	init_list_head(&(root->nil_node->rb_keys));
 	root->nil_node->cnt_key = 0;
 	root->nil_node->rb_parent = root->nil_node;
 	root->nil_node->rb_right = root->nil_node;
@@ -91,8 +92,7 @@ void init_rb_root(simul_rb_root *root) {
 */
 	set_rb_black(root->root_node);
 	root->root_node->std_key = SIMUL_RB_NIL;
-	root->root_node->rb_keys = (struct simul_rb_key *) malloc (sizeof(struct simul_rb_key) * (GROUP_SIZE));
-	memset(root->nil_node->rb_keys, 0, sizeof(struct simul_rb_key) * (GROUP_SIZE));
+	init_list_head(&(root->root_node->rb_keys));
 	root->root_node->cnt_key = 0;
 	root->root_node->rb_parent = root->nil_node;
 	root->root_node->rb_left = root->nil_node;
@@ -406,17 +406,17 @@ int simul_rb_insert(simul_rb_root *T, long long int inkey) {
 
 //	if (is_in_group == 1 && comp_node->rb_keys[inkey % (GROUP_SIZE)].rb_key != 0)
 //		return SIMUL_RB_EXIST;
-
 	
+	new_key = (simul_rb_key *)malloc(sizeof(simul_rb_key));
+	init_rb_key(new_key, inkey);
+	cnt_key++;
+
 	if (is_in_group == 1) {
-		comp_node->rb_keys[inkey % (GROUP_SIZE)].rb_key = inkey;
+		list_add(&(new_key->list), &(comp_node->rb_keys));	// connect list : second -> first -> second->next
 	//	comp_node->rb_keys[new_key->rb_key % GROUP_SIZE].area = new_key->area;
 		comp_node->cnt_key++;
 		return SIMUL_RB_IN_GROUP;
 	}
-
-	new_key = (simul_rb_key *)malloc(sizeof(simul_rb_key));
-	init_rb_key(new_key, inkey);
 	
 	// init node
 	init_rb_node(T, new_node, new_key);
@@ -508,14 +508,32 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey) {
 	simul_rb_node *y;
 	simul_rb_node *x;
 	simul_rb_key *pre_cur_key = NULL, *cur_key = NULL;
+	struct simul_list_head *cur_list = NULL;
 
 	if (del_node == T->nil_node)
 		return SIMUL_RB_NOT_EXIST;
 
-	memset(&(del_node->rb_keys[delkey % (GROUP_SIZE)]), 0, sizeof(simul_rb_key));
-	del_node->cnt_key--;
+	pre_cur_key = &(del_node->rb_keys);
+	cur_key = container_of(del_node->rb_keys.next, simul_rb_key, list);
+	cur_list = del_node->rb_keys.next;
 
-	if (del_node->cnt_key > 0)
+	while (cur_list != &del_node->rb_keys) {
+		if (cur_key->rb_key == delkey) {
+			is_in_group = 1;
+			break;
+		}
+		pre_cur_key = cur_key;
+		cur_key = container_of(cur_key->list.next, simul_rb_key, list);
+		cur_list = cur_list->next;
+	}
+
+	if (is_in_group == 0)
+		return SIMUL_RB_NOT_EXIST;
+
+	list_del(&(cur_key->list));
+	free(cur_key);
+	del_node->cnt_key--;
+	if (del_node->cnt_key > 0) 
 		return SIMUL_RB_IN_GROUP;
 	
 	y = ((del_node->rb_left == T->nil_node) || (del_node->rb_right == T->nil_node)) ? del_node : simul_rb_successor(T, del_node);
@@ -596,7 +614,6 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey) {
 #if DEBUG_WRITE_COUNT
 		write_count += del_node->count;
 #endif
-		free(del_node->rb_keys);
 		free(del_node);
 
 //		del_node->is_free = 1;
@@ -609,7 +626,6 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey) {
 #if DEBUG_WRITE_COUNT
 		write_count += y->count;
 #endif
-		free(y->rb_keys);
 		free(y);
 //		y->is_free = 1;
 //		add_swap_list(y);
@@ -723,6 +739,10 @@ void simul_rb_pre_order(simul_rb_root *T, simul_rb_node *node) {
 }
 
 void simul_rb_delete_all(simul_rb_root *T, simul_rb_node *node) {
+	simul_rb_key *cur_key = container_of(node->rb_keys.next, simul_rb_key, list);
+	simul_rb_key *pre_key = &(node->rb_keys);
+	struct simul_list_head *cur_list = node->rb_keys.next;
+
 	if (node == T->nil_node)
 		return;
 
@@ -735,7 +755,13 @@ void simul_rb_delete_all(simul_rb_root *T, simul_rb_node *node) {
 #if DEBUG_WRITE_COUNT
 	remain_count += node->count;
 #endif
-	free(node->rb_keys);
+	while (cur_list != &node->rb_keys) {
+		pre_key = cur_key;
+		cur_key = container_of(cur_key->list.next, simul_rb_key, list);
+		cur_list = cur_list->next;
+		free(pre_key);
+	}
+
 	free(node);
 }
 
@@ -918,7 +944,7 @@ int main(int argc, char *argv[])
 	}
 	gettimeofday(&end, NULL);
 
-	sizeofmem = cnt_node * (sizeof(unsigned int) + sizeof(long long int) + (sizeof(struct simul_rb_node *)*3) + sizeof(unsigned int) + (sizeof(long long int)*(GROUP_SIZE)));
+	sizeofmem = (cnt_node * (sizeof(unsigned int) + sizeof(long long int) + (sizeof(struct simul_rb_node *)*3) + sizeof(unsigned int))) + (cnt_key * (sizeof(struct simul_list_head)));
 	while (sizeofmem / 1024 > 0) {
 		transmemsize = (double)sizeofmem / 1024;
 		sizeofmem /= 1024;

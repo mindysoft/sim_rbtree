@@ -20,13 +20,14 @@
 
 typedef struct simul_rb_key {
 	long long int rb_key;
+	struct simul_list_head list;
 	struct simul_area *area;
 } simul_rb_key;
 
 typedef struct simul_rb_node {
 	unsigned int rb_color;
 	long long int std_key;
-	struct simul_rb_key *rb_keys;
+	struct simul_list_head rb_keys;
 	struct simul_rb_node *rb_parent;
 	struct simul_rb_node *rb_right;
 	struct simul_rb_node *rb_left;
