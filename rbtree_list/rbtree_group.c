@@ -727,6 +727,32 @@ simul_rb_node *simul_rb_search(simul_rb_root *T, long long int find_key) {
 
 	return search_node;
 }
+
+
+simul_rb_key *simul_rb_search_key(simul_rb_root *T, long long int find_key) {
+	simul_rb_node *search_node = simul_rb_search(T, find_key);
+	simul_rb_key *pre_cur_key = NULL, *cur_key = NULL;
+	struct simul_list_head *cur_list = NULL;
+
+	if (search_node == T->nil_node)
+		return NULL;
+
+	pre_cur_key = &(search_node->rb_keys);
+	cur_key = container_of(search_node->rb_keys.next, simul_rb_key, list);
+	cur_list = search_node->rb_keys.next;
+
+	while (cur_list != &search_node->rb_keys) {
+		if (cur_key->rb_key == find_key) {
+			break;
+		}
+		pre_cur_key = cur_key;
+		cur_key = container_of(cur_key->list.next, simul_rb_key, list);
+		cur_list = cur_list->next;
+	}
+
+	return cur_key;
+} 
+
 void simul_rb_pre_order(simul_rb_root *T, simul_rb_node *node) {
 //	printf("addr %p \tcount %u\n", node, node->count);
 #if DEBUG_WRITE_COUNT
@@ -857,23 +883,24 @@ int main(int argc, char *argv[])
 {
 	simul_rb_root *root = NULL;
 	simul_rb_node *node = NULL;
+	simul_rb_key *search_node = NULL;
 	FILE *fp = NULL;
-	long long int in_key = -1, i = 0;
+	long long int in_key = -1, i = 0, *rvalue;
 	char in_type[20], fn[40];
 	int retval = -1, endpoint = 0, line = 1000;
 	time_t t;
-	struct timeval start, end, instart, inend, delstart, delend;
+	struct timeval start, end, instart, inend, delstart, delend, serstart, serend;
 
 	// for research
 	unsigned long long int sizeofmem = 0, insert_write_count = 0, delete_write_count = 0;
 	double transmemsize = 0.0;
 	int bytelevel = 0;
 	char byteunit[5][4] = {"B", "KB", "MB", "GB", "TB"};
-
+	char rfn[100];
 	
 	if (argc < 3) {
 		printf (" [RBTREE SIM] execute error.\n");
-		printf (" [RBTREE SIM] usage : %s #ofGROUP #ofWSS [|rand]\n [RBTREE SIM] example : %s 10 100000 or %s 10 100000 rand\n [RBTREE SIM] try again.\n", argv[0], argv[0], argv[0]);
+		printf (" [RBTREE SIM] usage : %s #ofGROUP #ofWSS [|rand] [|load key range]\n [RBTREE SIM] example : %s 10 100000, %s 10 100000 rand, %s 10 100000 rand load 5 or %s 10 100000 5\n [RBTREE SIM] try again.\n", argv[0], argv[0], argv[0], argv[0], argv[0]);
 		return 1;
 	}
 
@@ -897,10 +924,27 @@ int main(int argc, char *argv[])
 
 	if(argc > 3 &&  strcmp(argv[3], "rand") == 0) {
                 printf(" -- run random mode -- \n");
+
+		rvalue = (long long int *)malloc(sizeof(long long int) * WSS);
+		if (argc > 4 && strcmp(argv[4], "load") == 0) {
+			printf(" -- load random value (range %s) --\n", argv[5]);
+			strcpy(rfn, "../rvalues/rvalue_");
+			strcat(rfn, argv[5]);
+			fp = fopen(rfn, "r");
+			for (i = 0; i < WSS; i++)	
+				fscanf(fp, "%lld", &rvalue[i]);
+			fclose(fp);
+		}	
+
 		gettimeofday(&instart, NULL);
                 for(i = 0; i<WSS;i++){
-                        long long int key = rand() % ENABLE_MEM_SIZE;
-//                        long long int key = rand() % WSS;
+			long long int key;
+			if (argc < 5)
+	                        key = rand() % ENABLE_MEM_SIZE;
+			else if (strcmp(argv[4], "load") == 0) 
+				key = rvalue[i];
+			else
+                        	key = rand() % ((WSS)*atoi(argv[4]));
                         retval = simul_rb_insert(root, (long long int)key);
                 }
 		gettimeofday(&inend, NULL);
@@ -908,10 +952,28 @@ int main(int argc, char *argv[])
 		simul_rb_pre_order(root, root->root_node->rb_left);	
 		insert_write_count = write_count;
 #endif		
+		gettimeofday(&serstart, NULL);
+		for(i = 0; i<WSS;i++){
+			long long int key;
+			if (argc < 5)
+	                        key = rand() % ENABLE_MEM_SIZE;
+			else if (strcmp(argv[4], "load") == 0)
+				key = rvalue[i];
+			else
+                        	key = rand() % ((WSS)*atoi(argv[4]));
+                        search_node = simul_rb_search_key(root, (long long int)key);
+                }
+		gettimeofday(&serend, NULL);
+
 		gettimeofday(&delstart, NULL);
                 for(i = 0; i<WSS;i++){
-                        long long int key = rand() % ENABLE_MEM_SIZE;
-//                        long long int key = rand() % WSS;
+			long long int key;
+			if (argc < 5)
+	                        key = rand() % ENABLE_MEM_SIZE;
+			else if (strcmp(argv[4], "load") == 0)
+				key = rvalue[i];
+			else
+                        	key = rand() % ((WSS)*atoi(argv[4]));
                         retval = simul_rb_delete(root, (long long int)key);
                 }
 		gettimeofday(&delend, NULL);
@@ -930,7 +992,13 @@ int main(int argc, char *argv[])
 #if DEBUG_WRITE_COUNT
 		simul_rb_pre_order(root, root->root_node->rb_left);	
 		insert_write_count = write_count;
-#endif		
+#endif	
+		gettimeofday(&serstart, NULL);
+		for(i = 0; i<WSS;i++){
+                        search_node = simul_rb_search_key(root, (long long int)i);
+                }
+		gettimeofday(&serend, NULL);
+	
 		gettimeofday(&delstart, NULL);
 		for(i = 0; i<WSS;i++){
 			retval = simul_rb_delete(root, (long long int)i);
@@ -964,6 +1032,7 @@ int main(int argc, char *argv[])
 #endif 
 	printf(" size of tree memory : %.4lf %s\n", transmemsize, byteunit[bytelevel]);
 	
+	printf(" Retrieve time: %6.2f s\n", serend.tv_sec - serstart.tv_sec + (serend.tv_usec - serstart.tv_usec) / 1000000.0);
 	printf(" Insertion time: %6.2f s\n", inend.tv_sec - instart.tv_sec + (inend.tv_usec - instart.tv_usec) / 1000000.0);
 	printf(" Deletion time: %6.2f s\n", delend.tv_sec - delstart.tv_sec + (delend.tv_usec - delstart.tv_usec) / 1000000.0);
 	printf(" Elapsed time: %6.2f s\n", end.tv_sec - start.tv_sec + (end.tv_usec - start.tv_usec) / 1000000.0);

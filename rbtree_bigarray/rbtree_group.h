@@ -77,6 +77,7 @@ int simul_rb_delete(simul_rb_root *T, long long int delkey);
 void simul_rb_delete_fixup(simul_rb_root *T, simul_rb_node *chg_node);
 
 simul_rb_node *simul_rb_search(simul_rb_root *T, long long int find_key);
+simul_rb_key *simul_rb_search_key(simul_rb_root *T, long long int find_key);
 void simul_rb_pre_order(simul_rb_root *T, simul_rb_node *node);
 void simul_rb_delete_all(simul_rb_root *T, simul_rb_node *node);
 

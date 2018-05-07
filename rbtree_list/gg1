@@ -1,0 +1,13 @@
+# started on Tue May  1 07:43:12 2018
+
+
+ Performance counter stats for './exefile 1 10000000 rand 100':
+
+     2,817,440,861      cache-misses:u                                                (60.00%)
+       608,345,962      LLC-load-misses:u         #   52.17% of all LL-cache hits     (60.00%)
+     1,166,083,067      LLC-loads:u                                                   (60.00%)
+         1,177,265      LLC-store-misses:u                                            (40.00%)
+        11,768,911      LLC-stores:u                                                  (40.00%)
+
+      49.598439266 seconds time elapsed
+
